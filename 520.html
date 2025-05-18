@@ -1,0 +1,1574 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>To CJW - 520</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.7.1/gsap.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            background: #000;
+            overflow: hidden;
+            font-family: "Microsoft YaHei", sans-serif;
+            color: #fff;
+        }
+        #canvas {
+            position: fixed;
+            top: 0;
+            left: 0;
+            z-index: 1;
+        }
+        .code-scroll {
+            position: fixed;
+            right: 20px;
+            top: 50%;
+            transform: translateY(-50%);
+            width: 300px;
+            height: 70vh;
+            background: rgba(0, 0, 0, 0.8);
+            border: 1px solid rgba(0, 255, 249, 0.3);
+            border-radius: 10px;
+            padding: 0;
+            font-family: 'Courier New', monospace;
+            color: #00ff99;
+            overflow: hidden;
+            z-index: 2;
+            opacity: 0.8;
+            box-shadow: 0 0 20px rgba(0, 255, 249, 0.2);
+        }
+        .code-header {
+            padding: 8px 15px;
+            border-bottom: 1px solid rgba(0, 255, 249, 0.3);
+            font-size: 12px;
+            display: flex;
+            justify-content: space-between;
+            background: rgba(0, 40, 60, 0.7);
+        }
+        .code-title {
+            color: #00ff99;
+        }
+        .code-buttons span {
+            display: inline-block;
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            margin-left: 5px;
+        }
+        .code-buttons span:nth-child(1) {
+            background: #ff5f56;
+        }
+        .code-buttons span:nth-child(2) {
+            background: #ffbd2e;
+        }
+        .code-buttons span:nth-child(3) {
+            background: #27c93f;
+        }
+        .code-content {
+            position: absolute;
+            top: 30px;
+            left: 0;
+            width: 100%;
+            height: calc(100% - 30px);
+            padding: 15px;
+            white-space: pre;
+            overflow: hidden;
+            font-size: 12px;
+        }
+        .code-line {
+            display: flex;
+            margin-bottom: 3px;
+            font-size: 12px;
+            opacity: 0.9;
+        }
+        .matrix-effect .code-line {
+            animation: matrixFade 4s infinite;
+            animation-delay: var(--delay);
+        }
+        @keyframes matrixFade {
+            0%, 100% { opacity: 0.6; color: var(--color); }
+            50% { opacity: 1; color: #00ff00; }
+        }
+        .code-line-number {
+            flex: 0 0 30px;
+            color: rgba(255, 255, 255, 0.3);
+            user-select: none;
+        }
+        .code-line-content {
+            flex: 1;
+        }
+        .code-container {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            padding: 0 15px;
+        }
+        .code-scroll-inner {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            padding: 0 15px;
+            will-change: transform;
+        }
+        .code-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(
+                to bottom,
+                rgba(0, 0, 0, 0.8) 0%,
+                rgba(0, 0, 0, 0) 5%,
+                rgba(0, 0, 0, 0) 95%,
+                rgba(0, 0, 0, 0.8) 100%
+            );
+            pointer-events: none;
+            z-index: 5;
+        }
+        .terminal-cursor {
+            display: inline-block;
+            width: 8px;
+            height: 15px;
+            background: #00ff00;
+            animation: blink 1s infinite;
+            vertical-align: middle;
+            margin-left: 5px;
+        }
+        @keyframes blink {
+            0%, 49% { opacity: 1; }
+            50%, 100% { opacity: 0; }
+        }
+        .content-container {
+            position: fixed;
+            left: 50%;
+            top: 50%;
+            transform: translate(-50%, -50%);
+            width: 340px;
+            height: 100%;
+            z-index: 2;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            perspective: 2000px;
+        }
+        .page-container {
+            position: relative;
+            width: 320px;
+            height: 440px;
+            transform-style: preserve-3d;
+        }
+        .content-wrapper {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            transform-style: preserve-3d;
+            transition: transform 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        .content-face {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            padding: 30px;
+            background: rgba(0, 15, 30, 0.85);
+            border: 1px solid #00fff9;
+            border-radius: 15px;
+            backface-visibility: hidden;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            align-items: center;
+            text-align: center;
+            transform-style: preserve-3d;
+            box-shadow: 0 0 30px rgba(0, 255, 249, 0.25);
+            overflow: hidden;
+        }
+        .content-face::before {
+            content: '';
+            position: absolute;
+            top: -50%;
+            left: -50%;
+            width: 200%;
+            height: 200%;
+            background: linear-gradient(
+                45deg,
+                transparent 0%,
+                rgba(0, 255, 249, 0.1) 50%,
+                transparent 100%
+            );
+            animation: shine 8s infinite;
+            pointer-events: none;
+        }
+        @keyframes shine {
+            0% { transform: translateX(-100%) translateY(-100%) rotate(45deg); }
+            100% { transform: translateX(100%) translateY(100%) rotate(45deg); }
+        }
+        .neon-text {
+            font-size: 2em;
+            color: #fff;
+            text-shadow: 0 0 5px #fff,
+                         0 0 10px #fff,
+                         0 0 20px #00fff9,
+                         0 0 30px #00fff9,
+                         0 0 40px #00fff9;
+            margin: 15px 0;
+            opacity: 0;
+            transform: translateY(20px);
+            letter-spacing: 2px;
+        }
+        .cyber-heart-container {
+            width: 100%;
+            height: 120px;
+            position: relative;
+            margin: 10px 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+        .cyber-heart {
+            width: 50px;
+            height: 50px;
+            position: relative;
+            transform-style: preserve-3d;
+            animation: pulse 1.5s ease-in-out infinite;
+        }
+        .cyber-heart::before,
+        .cyber-heart::after {
+            content: '';
+            position: absolute;
+            width: 25px;
+            height: 40px;
+            background: linear-gradient(135deg, #ff008c, #00f0ff);
+            border-radius: 25px 25px 0 0;
+            transform-origin: 0 100%;
+            box-shadow: 0 0 10px rgba(0, 240, 255, 0.8);
+        }
+        .cyber-heart::before {
+            left: 25px;
+            transform: rotate(-45deg);
+        }
+        .cyber-heart::after {
+            left: 0;
+            transform: rotate(45deg);
+        }
+        @keyframes pulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.15); }
+            100% { transform: scale(1); }
+        }
+        .heart-particles {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            top: 0;
+            left: 0;
+            overflow: hidden;
+            pointer-events: none;
+        }
+        .heart-particle {
+            position: absolute;
+            width: 4px;
+            height: 4px;
+            background: #00f0ff;
+            border-radius: 50%;
+            opacity: 0;
+        }
+        .message-container {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            width: 100%;
+            padding: 20px 0;
+            position: relative;
+            z-index: 15;
+        }
+        .message {
+            font-size: 1.1em;
+            line-height: 1.6;
+            margin: 8px 0;
+            opacity: 0;
+            transform: translateX(-100px);
+            text-align: center;
+            color: #fff;
+            letter-spacing: 1px;
+            width: 100%;
+            padding: 0 10px;
+        }
+        .cyber-button {
+            padding: 12px 28px;
+            color: #fff;
+            background: transparent;
+            border: 1px solid #00fff9;
+            font-size: 16px;
+            letter-spacing: 2px;
+            text-transform: uppercase;
+            cursor: pointer;
+            transition: all 0.3s;
+            overflow: hidden;
+            position: relative;
+            border-radius: 5px;
+            margin-bottom: 15px;
+        }
+        .cyber-button:hover {
+            background: rgba(0, 255, 249, 0.2);
+            color: #fff;
+            box-shadow: 0 0 20px rgba(0, 255, 249, 0.5);
+        }
+        .cyber-button::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(
+                120deg,
+                transparent,
+                rgba(255, 255, 255, 0.3),
+                transparent
+            );
+            transition: 0.5s;
+        }
+        .cyber-button:hover::before {
+            left: 100%;
+        }
+        .progress-bar {
+            position: absolute;
+            bottom: 15px;
+            left: 50%;
+            transform: translateX(-50%);
+            display: flex;
+            gap: 8px;
+        }
+        .progress-dot {
+            width: 6px;
+            height: 6px;
+            border-radius: 50%;
+            background: rgba(255, 255, 255, 0.3);
+            transition: all 0.3s;
+        }
+        .progress-dot.active {
+            background: #00fff9;
+            box-shadow: 0 0 10px #00fff9;
+        }
+        .meteors-container {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            pointer-events: none;
+            z-index: 0;
+        }
+        .meteor {
+            position: absolute;
+            width: 2px;
+            height: 2px;
+            background: linear-gradient(to right, rgba(255, 255, 255, 0), #fff);
+            border-radius: 50%;
+            box-shadow: 0 0 0 1px rgba(255,255,255,0.1);
+            animation: meteor linear forwards;
+        }
+        @keyframes meteor {
+            0% {
+                opacity: 1;
+                transform: scale(1) rotate(0deg) translateX(0);
+            }
+            70% {
+                opacity: 1;
+            }
+            100% {
+                opacity: 0;
+                transform: scale(0.2) rotate(0deg) translateX(100vw);
+            }
+        }
+        .special-animations {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 3;
+            pointer-events: none;
+            opacity: 0;
+            transition: opacity 0.5s;
+        }
+        .person-silhouette {
+            position: absolute;
+            right: 100px;
+            top: 50%;
+            transform: translateY(-50%);
+            width: 60px;
+            height: 100px;
+            opacity: 0;
+            transition: opacity 1s;
+            z-index: 10;
+        }
+        .person-head {
+            position: absolute;
+            width: 30px;
+            height: 30px;
+            border-radius: 50%;
+            background: rgba(0, 255, 249, 0.7);
+            left: 50%;
+            transform: translateX(-50%);
+            top: 0;
+            box-shadow: 0 0 15px rgba(0, 255, 249, 0.9);
+        }
+        .person-body {
+            position: absolute;
+            width: 2px;
+            height: 40px;
+            background: rgba(0, 255, 249, 0.7);
+            left: 50%;
+            transform: translateX(-50%);
+            top: 30px;
+            box-shadow: 0 0 10px rgba(0, 255, 249, 0.9);
+        }
+        .person-arms {
+            position: absolute;
+            width: 40px;
+            height: 2px;
+            background: rgba(0, 255, 249, 0.7);
+            left: 50%;
+            transform: translateX(-50%);
+            top: 45px;
+            box-shadow: 0 0 10px rgba(0, 255, 249, 0.9);
+        }
+        .person-legs {
+            position: absolute;
+            width: 30px;
+            height: 30px;
+            left: 50%;
+            transform: translateX(-50%);
+            top: 70px;
+        }
+        .person-leg {
+            position: absolute;
+            width: 2px;
+            height: 30px;
+            background: rgba(0, 255, 249, 0.7);
+            box-shadow: 0 0 10px rgba(0, 255, 249, 0.9);
+        }
+        .person-leg-left {
+            transform: rotate(15deg);
+            left: 10px;
+        }
+        .person-leg-right {
+            transform: rotate(-15deg);
+            right: 10px;
+        }
+        .pointer {
+            position: absolute;
+            right: 190px;
+            top: 50%;
+            transform: translateY(-50%);
+            opacity: 0;
+            transition: opacity 1s;
+            z-index: 10;
+        }
+        .pointer-arrow {
+            width: 80px;
+            height: 3px;
+            background: #ff00de;
+            position: relative;
+            box-shadow: 0 0 10px rgba(255, 0, 222, 0.9);
+        }
+        .pointer-arrow:before {
+            content: '';
+            position: absolute;
+            right: 0;
+            top: -4px;
+            width: 10px;
+            height: 10px;
+            border-top: 2px solid #ff00de;
+            border-right: 2px solid #ff00de;
+            transform: rotate(45deg);
+            box-shadow: 0 0 10px rgba(255, 0, 222, 0.9);
+        }
+        .pointer-text {
+            position: absolute;
+            right: 280px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: #ff00de;
+            font-size: 20px;
+            font-weight: bold;
+            text-shadow: 0 0 10px rgba(255, 0, 222, 0.9);
+            white-space: nowrap;
+            opacity: 0;
+            transition: opacity 1s;
+            z-index: 10;
+            background: rgba(0, 15, 30, 0.8);
+            padding: 10px 20px;
+            border-radius: 10px;
+            border: 2px solid #ff00de;
+            box-shadow: 0 0 15px #ff00de;
+        }
+        .finale-animation {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 50;
+            background: black;
+            opacity: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            flex-direction: column;
+            transition: opacity 0.5s;
+            pointer-events: none;
+        }
+        .finale-text {
+            font-size: 3em;
+            color: #fff;
+            text-shadow: 0 0 10px #fff,
+                         0 0 20px #fff,
+                         0 0 30px #00fff9,
+                         0 0 40px #00fff9,
+                         0 0 50px #00fff9;
+            margin: 30px 0;
+            opacity: 0;
+            transform: scale(0.5);
+            transition: all 0.5s;
+        }
+        .finale-heart {
+            width: 100px;
+            height: 100px;
+            position: relative;
+            transform-style: preserve-3d;
+            opacity: 0;
+            transform: scale(0.5);
+            transition: all 0.5s;
+        }
+        .finale-heart::before,
+        .finale-heart::after {
+            content: '';
+            position: absolute;
+            width: 50px;
+            height: 80px;
+            background: linear-gradient(135deg, #ff008c, #00f0ff);
+            border-radius: 50px 50px 0 0;
+            transform-origin: 0 100%;
+            box-shadow: 0 0 30px rgba(0, 240, 255, 0.8);
+        }
+        .finale-heart::before {
+            left: 50px;
+            transform: rotate(-45deg);
+        }
+        .finale-heart::after {
+            left: 0;
+            transform: rotate(45deg);
+        }
+        .finale-particles {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            pointer-events: none;
+        }
+        .finale-particle {
+            position: absolute;
+            width: 5px;
+            height: 5px;
+            border-radius: 50%;
+            opacity: 0;
+            filter: blur(1px);
+        }
+        .guide-group {
+            position: fixed;
+            right: 15%;
+            top: 50%;
+            transform: translateY(-50%);
+            display: flex;
+            align-items: center;
+            gap: 18px;
+            z-index: 10;
+            opacity: 0;
+            transition: opacity 0.5s ease;
+        }
+        .guide-text {
+            color: #ff00de;
+            font-size: 20px;
+            font-weight: bold;
+            text-shadow: 0 0 10px rgba(255, 0, 222, 0.9);
+            background: rgba(0, 15, 30, 0.8);
+            padding: 10px 20px;
+            border-radius: 10px;
+            border: 2px solid #ff00de;
+            box-shadow: 0 0 15px #ff00de;
+            opacity: 1;
+            white-space: nowrap;
+        }
+        .guide-arrow {
+            width: 60px;
+            height: 3px;
+            background: #ff00de;
+            box-shadow: 0 0 10px #ff00de;
+            position: relative;
+            border-radius: 2px;
+            opacity: 1;
+            transform: scaleX(-1);
+            animation: arrowMove 1s infinite alternate;
+        }
+        @keyframes arrowMove {
+            0% { transform: scaleX(-1) translateX(0); }
+            100% { transform: scaleX(-1) translateX(-10px); }
+        }
+        .guide-arrow::after {
+            content: '';
+            position: absolute;
+            right: 0;
+            top: -6px;
+            border: solid #ff00de;
+            border-width: 0 3px 3px 0;
+            display: inline-block;
+            padding: 8px;
+            transform: rotate(-45deg);
+            box-shadow: 0 0 10px #ff00de;
+        }
+        .guide-person {
+            width: 40px;
+            height: 80px;
+            position: relative;
+            opacity: 1;
+        }
+        .guide-person-head {
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            background: rgba(0, 255, 249, 0.7);
+            position: absolute;
+            left: 50%;
+            top: 0;
+            transform: translateX(-50%);
+            box-shadow: 0 0 10px #00fff9;
+        }
+        .guide-person-body {
+            width: 3px;
+            height: 32px;
+            background: #00fff9;
+            position: absolute;
+            left: 50%;
+            top: 24px;
+            transform: translateX(-50%);
+            border-radius: 2px;
+        }
+        .guide-person-arms {
+            width: 28px;
+            height: 3px;
+            background: #00fff9;
+            position: absolute;
+            left: 50%;
+            top: 38px;
+            transform: translateX(-50%);
+            border-radius: 2px;
+        }
+        .guide-person-legs {
+            width: 28px;
+            height: 28px;
+            position: absolute;
+            left: 50%;
+            top: 56px;
+            transform: translateX(-50%);
+        }
+        .guide-person-leg {
+            width: 3px;
+            height: 28px;
+            background: #00fff9;
+            position: absolute;
+            border-radius: 2px;
+            box-shadow: 0 0 8px #00fff9;
+        }
+        .guide-person-leg.left {
+            left: 2px;
+            transform: rotate(18deg);
+        }
+        .guide-person-leg.right {
+            right: 2px;
+            transform: rotate(-18deg);
+        }
+    </style>
+</head>
+<body>
+    <canvas id="canvas"></canvas>
+    
+    <div class="meteors-container" id="meteors-container"></div>
+    
+    <div class="code-scroll">
+        <div class="code-header">
+            <div class="code-title">matrix.exe</div>
+            <div class="code-buttons">
+                <span></span>
+                <span></span>
+                <span></span>
+            </div>
+        </div>
+        <div class="code-content" id="code-content">
+            <div class="code-overlay"></div>
+            <div class="code-container" id="code-container"></div>
+        </div>
+    </div>
+    
+    <div class="special-animations" id="special-animations"></div>
+
+    <div id="guide-container" class="guide-group">
+        <div class="guide-text">没错，就是你！</div>
+        <div class="guide-arrow"></div>
+        <div class="guide-person">
+            <div class="guide-person-head"></div>
+            <div class="guide-person-body"></div>
+            <div class="guide-person-arms"></div>
+            <div class="guide-person-legs">
+                <div class="guide-person-leg left"></div>
+                <div class="guide-person-leg right"></div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="content-container">
+        <div class="page-container">
+            <div class="content-wrapper">
+                <div class="content-face">
+                    <div class="cyber-heart-container">
+                        <div class="cyber-heart"></div>
+                        <div class="heart-particles" id="heart-particles"></div>
+                    </div>
+                    <div class="neon-text">520</div>
+                    <div class="message-container">
+                        <div class="message">星辰大海皆是我的代码世界</div>
+                        <div class="message">今天，想与你分享</div>
+                    </div>
+                    <button class="cyber-button" onclick="nextPage()">继续</button>
+                    <div class="progress-bar"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="finale-animation" id="finale-animation">
+        <div class="finale-heart" id="finale-heart"></div>
+        <div class="finale-text" id="finale-text-1">520</div>
+        <div class="finale-particles" id="finale-particles"></div>
+    </div>
+
+    <script>
+        // Three.js 场景设置
+        const scene = new THREE.Scene();
+        const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+        const renderer = new THREE.WebGLRenderer({
+            canvas: document.querySelector('#canvas'),
+            antialias: true
+        });
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        renderer.setPixelRatio(window.devicePixelRatio);
+
+        // 创建粒子系统
+        const particlesGeometry = new THREE.BufferGeometry();
+        const particlesCount = 5000;
+        const posArray = new Float32Array(particlesCount * 3);
+        const colors = new Float32Array(particlesCount * 3);
+
+        for(let i = 0; i < particlesCount * 3; i += 3) {
+            posArray[i] = (Math.random() - 0.5) * 5;
+            posArray[i+1] = (Math.random() - 0.5) * 5;
+            posArray[i+2] = (Math.random() - 0.5) * 5;
+            
+            // 随机颜色
+            if (Math.random() > 0.5) {
+                // 青色
+                colors[i] = 0;
+                colors[i+1] = 0.8 + Math.random() * 0.2;
+                colors[i+2] = 0.8 + Math.random() * 0.2;
+            } else {
+                // 粉色
+                colors[i] = 0.8 + Math.random() * 0.2;
+                colors[i+1] = 0;
+                colors[i+2] = 0.8 + Math.random() * 0.2;
+            }
+        }
+
+        particlesGeometry.setAttribute('position', new THREE.BufferAttribute(posArray, 3));
+        particlesGeometry.setAttribute('color', new THREE.BufferAttribute(colors, 3));
+
+        const particlesMaterial = new THREE.PointsMaterial({
+            size: 0.005,
+            vertexColors: true,
+            transparent: true,
+            opacity: 0.8
+        });
+
+        const particlesMesh = new THREE.Points(particlesGeometry, particlesMaterial);
+        scene.add(particlesMesh);
+
+        camera.position.z = 3;
+
+        // 动画循环
+        const animate = () => {
+            requestAnimationFrame(animate);
+            particlesMesh.rotation.y += 0.0003;
+            particlesMesh.rotation.x += 0.0002;
+            renderer.render(scene, camera);
+        };
+        animate();
+
+        // 窗口大小调整
+        window.addEventListener('resize', () => {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        });
+
+        // 鼠标移动效果
+        document.addEventListener('mousemove', (event) => {
+            const mouseX = event.clientX / window.innerWidth - 0.5;
+            const mouseY = event.clientY / window.innerHeight - 0.5;
+            gsap.to(particlesMesh.rotation, {
+                x: mouseY * 0.3,
+                y: mouseX * 0.3,
+                duration: 2
+            });
+        });
+
+        // 创建心形粒子
+        function createHeartParticles() {
+            const container = document.getElementById('heart-particles');
+            
+            for (let i = 0; i < 15; i++) {
+                const particle = document.createElement('div');
+                particle.className = 'heart-particle';
+                container.appendChild(particle);
+                
+                animateHeartParticle(particle);
+            }
+        }
+        
+        function animateHeartParticle(particle) {
+            const heartRect = document.querySelector('.cyber-heart').getBoundingClientRect();
+            const containerRect = document.querySelector('.cyber-heart-container').getBoundingClientRect();
+            
+            const x = Math.random() * heartRect.width - heartRect.width/2;
+            const y = Math.random() * heartRect.height - heartRect.height/2;
+            
+            const size = 2 + Math.random() * 4;
+            const duration = 1 + Math.random() * 2;
+            const delay = Math.random() * 2;
+            
+            particle.style.width = `${size}px`;
+            particle.style.height = `${size}px`;
+            
+            gsap.set(particle, {
+                x: containerRect.width/2 + x,
+                y: containerRect.height/2 + y,
+                backgroundColor: Math.random() > 0.5 ? '#00f0ff' : '#ff008c'
+            });
+            
+            gsap.to(particle, {
+                x: containerRect.width/2 + x + (-50 + Math.random() * 100),
+                y: containerRect.height/2 + y + (-50 + Math.random() * 100),
+                opacity: 1,
+                duration: 0.3,
+                delay: delay,
+                onComplete: () => {
+                    gsap.to(particle, {
+                        opacity: 0,
+                        duration: 0.5,
+                        delay: duration - 0.5,
+                        onComplete: () => {
+                            animateHeartParticle(particle);
+                        }
+                    });
+                }
+            });
+        }
+        
+        // 创建流星
+        function createMeteor() {
+            const meteor = document.createElement('div');
+            meteor.className = 'meteor';
+            
+            const speed = 0.5 + Math.random() * 0.8;
+            const size = 100 + Math.random() * 100;
+            const top = Math.random() * 30;
+            
+            meteor.style.top = `${top}%`;
+            meteor.style.left = `-${size}px`;
+            meteor.style.width = `${size}px`;
+            meteor.style.height = '1px';
+            meteor.style.animationDuration = `${speed}s`;
+            meteor.style.opacity = 0.7 + Math.random() * 0.3;
+            
+            document.getElementById('meteors-container').appendChild(meteor);
+            
+            setTimeout(() => {
+                meteor.remove();
+            }, speed * 1000);
+        }
+        
+        // 随机创建流星
+        setInterval(createMeteor, 1200);
+        
+        // 代码动画
+        const hackingCode = [
+            "import quantum.encryption as qe",
+            "import neural.network as nn",
+            "import time, sys, os",
+            "",
+            "class MatrixHack:",
+            "    def __init__(self):",
+            "        self.target = 'LOVE_SYSTEM'",
+            "        self.access_level = 0",
+            "        self.encryption = qe.QuantumEncryption()",
+            "        print('Initializing matrix connection...')",
+            "",
+            "    def bypass_security(self):",
+            "        for i in range(100):",
+            "            sys.stdout.write(f'\\rBypass security: {i}%')",
+            "            time.sleep(0.01)",
+            "        print('\\nSecurity bypassed successfully')",
+            "",
+            "    def decrypt_heart_code(self, target_name):",
+            "        keys = [ord(c) for c in target_name]",
+            "        heart_data = self.encryption.generate_heart(keys)",
+            "        return heart_data",
+            "",
+            "    def hack_universe(self):",
+            "        self.bypass_security()",
+            "        print('Accessing universe mainframe...')",
+            "        stars = [self.create_star() for _ in range(999)]",
+            "        return stars",
+            "",
+            "    def create_star(self):",
+            "        x = random.random() * universe.width",
+            "        y = random.random() * universe.height",
+            "        return Star(x, y, brightness=random.random())",
+            "",
+            "    def create_meteor_shower(self, count=999):",
+            "        print(f'Generating {count} meteors...')",
+            "        meteors = []",
+            "        for i in range(count):",
+            "            meteor = Meteor(",
+            "                x=random.random(),",
+            "                y=random.random(),",
+            "                speed=random.random()*5",
+            "            )",
+            "            meteors.append(meteor)",
+            "        return meteors",
+            "",
+            "    def focus_on_target(self, name):",
+            "        print(f'Setting primary focus: {name}')",
+            "        heart = self.decrypt_heart_code(name)",
+            "        universe.set_central_element(heart)",
+            "        universe.highlight(name)",
+            "        return True",
+            "",
+            "def main():",
+            "    hacker = MatrixHack()",
+            "    universe = Universe(width=1024, height=768)",
+            "    stars = hacker.hack_universe()",
+            "    universe.add_elements(stars)",
+            "",
+            "    meteors = hacker.create_meteor_shower()",
+            "    universe.add_elements(meteors)",
+            "",
+            "    print('Run sequence completed.')",
+            "    print('Executing special command...')",
+            "    hacker.focus_on_target('CJW')",
+            "",
+            "class Star:",
+            "    def __init__(self, x, y, brightness):",
+            "        self.x = x",
+            "        self.y = y",
+            "        self.brightness = brightness",
+            "        self.pulse = random.random()",
+            "",
+            "    def render(self, ctx):",
+            "        ctx.fillStyle = 'rgba(255,255,255,' + self.brightness + ')'",
+            "        ctx.beginPath()",
+            "        ctx.arc(self.x, self.y, 1 + self.brightness, 0, Math.PI * 2)",
+            "        ctx.fill()",
+            "",
+            "class Meteor:",
+            "    def __init__(self, x, y, speed):",
+            "        self.x = x",
+            "        self.y = y",
+            "        self.speed = speed",
+            "        self.tail = []",
+            "",
+            "    def update(self):",
+            "        self.x += self.speed",
+            "        self.y += self.speed",
+            "        self.tail.push({x: self.x, y: self.y})",
+            "        if self.tail.length > 20:",
+            "            self.tail.shift()",
+            "",
+            "    def render(self, ctx):",
+            "        ctx.strokeStyle = '#00ffff'",
+            "        ctx.lineWidth = 2",
+            "        ctx.beginPath()",
+            "        ctx.moveTo(self.tail[0].x, self.tail[0].y)",
+            "        for point in self.tail:",
+            "            ctx.lineTo(point.x, point.y)",
+            "        ctx.stroke()",
+            "",
+            "class Universe:",
+            "    def __init__(self, width, height):",
+            "        self.width = width",
+            "        self.height = height",
+            "        self.elements = []",
+            "        self.focus = None",
+            "",
+            "    def add_elements(self, elements):",
+            "        self.elements.extend(elements)",
+            "",
+            "    def set_central_element(self, element):",
+            "        self.central = element",
+            "",
+            "    def highlight(self, name):",
+            "        self.focus = name",
+            "",
+            "if __name__ == '__main__':",
+            "    main()",
+            "",
+            "# LOADING NEURAL NETWORK MODULE",
+            "import tensorflow as tf",
+            "import numpy as np",
+            "",
+            "model = tf.keras.Sequential([",
+            "    tf.keras.layers.Dense(128, activation='relu'),",
+            "    tf.keras.layers.Dropout(0.2),",
+            "    tf.keras.layers.Dense(64, activation='relu'),",
+            "    tf.keras.layers.Dense(1, activation='sigmoid')",
+            "])",
+            "",
+            "def love_algorithm(person_a, person_b):",
+            "    compatibility = np.random.random()",
+            "    return compatibility > 0.5",
+            "",
+            "def encrypt_message(message, key):",
+            "    encrypted = ''",
+            "    for char in message:",
+            "        encrypted += chr(ord(char) ^ key)",
+            "    return encrypted",
+            "",
+            "message = encrypt_message('520 I Love You', 42)",
+            "print(message)",
+            "",
+            "# EXECUTING FINAL SEQUENCE",
+            "print('Compiling love message...')",
+            "print('Target: CJW')",
+            "print('Status: CONFIRMED')",
+            "",
+            "# INITIALIZING VISUALIZATION ENGINE",
+            "import matplotlib.pyplot as plt",
+            "import seaborn as sns",
+            "",
+            "def visualize_heart():",
+            "    t = np.linspace(0, 2*np.pi, 1000)",
+            "    x = 16 * np.sin(t)**3",
+            "    y = 13 * np.cos(t) - 5 * np.cos(2*t) - 2 * np.cos(3*t) - np.cos(4*t)",
+            "    plt.plot(x, y, 'r-')",
+            "    plt.axis('equal')",
+            "    plt.show()",
+        ];
+
+        function setupMatrixCode() {
+            const container = document.getElementById('code-container');
+            container.innerHTML = '';
+            
+            const scrollInner = document.createElement('div');
+            scrollInner.className = 'code-scroll-inner';
+            container.appendChild(scrollInner);
+            
+            // 创建大量代码行，使滚动效果更加连续
+            const codeFragments = [];
+            
+            // 随机打乱代码行顺序，创造更多变化
+            for (let i = 0; i < 5; i++) {
+                const shuffledCode = [...hackingCode];
+                shuffledCode.sort(() => Math.random() - 0.5);
+                codeFragments.push(...shuffledCode);
+            }
+            
+            // 创建代码行
+            codeFragments.forEach((line, index) => {
+                const lineElement = document.createElement('div');
+                lineElement.className = 'code-line';
+                
+                // 更多颜色变化
+                const colorIndex = Math.floor(Math.random() * 10);
+                let color;
+                if (colorIndex < 6) {
+                    color = '#00ff99'; // 主要颜色
+                } else if (colorIndex < 8) {
+                    color = '#0cc0df'; // 第二颜色
+                } else {
+                    color = '#ff00de'; // 偶尔出现的高亮色
+                }
+                
+                lineElement.style.color = color;
+                
+                const lineNumber = document.createElement('div');
+                lineNumber.className = 'code-line-number';
+                lineNumber.textContent = (index % 100) + 1; // 只显示两位数行号
+                
+                const lineContent = document.createElement('div');
+                lineContent.className = 'code-line-content';
+                lineContent.textContent = line;
+                
+                lineElement.appendChild(lineNumber);
+                lineElement.appendChild(lineContent);
+                scrollInner.appendChild(lineElement);
+            });
+            
+            // 使用JavaScript实现平滑滚动，避免断层
+            let scrollPosition = 0;
+            const scrollHeight = scrollInner.scrollHeight;
+            const containerHeight = container.clientHeight;
+            
+            function smoothScroll() {
+                scrollPosition -= 1; // 滚动速度
+                
+                // 当滚动到足够距离时重置位置，实现无缝循环
+                if (Math.abs(scrollPosition) > scrollHeight / 2) {
+                    scrollPosition = 0;
+                }
+                
+                scrollInner.style.transform = `translateY(${scrollPosition}px)`;
+                requestAnimationFrame(smoothScroll);
+            }
+            
+            smoothScroll();
+            
+            // 随机闪烁效果
+            setInterval(() => {
+                const allLines = scrollInner.querySelectorAll('.code-line');
+                for (let i = 0; i < 10; i++) {
+                    const randomIndex = Math.floor(Math.random() * allLines.length);
+                    if (allLines[randomIndex]) {
+                        const color = Math.random() > 0.5 ? '#0cc0df' : '#00ff99';
+                        allLines[randomIndex].style.color = color;
+                        setTimeout(() => {
+                            allLines[randomIndex].style.color = '';
+                        }, 300);
+                    }
+                }
+            }, 500);
+        }
+
+        // 修改页面内容管理
+        const pages = [
+            {
+                title: "520",
+                messages: ["星辰大海皆是我的代码世界", "今天，想与你分享"]
+            },
+            {
+                title: "星空",
+                messages: ["我用代码写下了999颗流星", "只为衬托画面里唯一的焦点"],
+                showGuide: true
+            },
+            {
+                title: "Dear CJW",
+                messages: ["你的出现", "让我的世界有了更多的可能"],
+                special: true
+            },
+            {
+                title: "心动",
+                messages: ["如同两个函数的完美契合", "生活也因你而变得有序"]
+            },
+            {
+                title: "未来",
+                messages: ["愿我们的时光", "如同这段不会崩溃的代码"]
+            }
+        ];
+
+        let currentPage = 0;
+        
+        // 创建进度条
+        const progressBar = document.querySelector('.progress-bar');
+        pages.forEach((_, index) => {
+            const dot = document.createElement('div');
+            dot.className = `progress-dot ${index === 0 ? 'active' : ''}`;
+            progressBar.appendChild(dot);
+        });
+
+        // 更新进度条
+        function updateProgress() {
+            const dots = document.querySelectorAll('.progress-dot');
+            dots.forEach((dot, index) => {
+                dot.className = `progress-dot ${index === currentPage ? 'active' : ''}`;
+            });
+        }
+
+        // 特殊页面效果
+        function showSpecialAnimations() {
+            const container = document.getElementById('special-animations');
+            container.style.opacity = 1;
+            
+            // 创建999颗流星
+            const count = 20; // 实际显示20颗，视觉效果足够
+            
+            for(let i = 0; i < count; i++) {
+                setTimeout(() => {
+                    createSpecialMeteor(container);
+                }, i * 50);
+            }
+            
+            // 5秒后隐藏特效
+            setTimeout(() => {
+                container.style.opacity = 0;
+                setTimeout(() => {
+                    container.innerHTML = '';
+                }, 500);
+            }, 5000);
+        }
+        
+        function createSpecialMeteor(container) {
+            const meteor = document.createElement('div');
+            meteor.className = 'meteor';
+            
+            const speed = 0.5 + Math.random() * 1;
+            const size = 150 + Math.random() * 150;
+            const top = Math.random() * 100;
+            const left = Math.random() * 100;
+            
+            meteor.style.top = `${top}%`;
+            meteor.style.left = `${left - size/window.innerWidth*100}%`;
+            meteor.style.width = `${size}px`;
+            meteor.style.height = '2px';
+            meteor.style.animationDuration = `${speed}s`;
+            meteor.style.opacity = 0.7 + Math.random() * 0.3;
+            meteor.style.transform = `rotate(${Math.random() * 45}deg)`;
+            
+            container.appendChild(meteor);
+            
+            setTimeout(() => {
+                meteor.remove();
+            }, speed * 1000);
+        }
+
+        // 控制guide-group的显示
+        function updateGuideVisibility(show) {
+            const guideContainer = document.getElementById('guide-container');
+            if (!guideContainer) return;
+            
+            if (show) {
+                guideContainer.style.opacity = '1';
+                // 添加指示箭头动画
+                const arrow = guideContainer.querySelector('.guide-arrow');
+                if (arrow) {
+                    gsap.to(arrow, {
+                        x: -10,
+                        duration: 1,
+                        repeat: -1,
+                        yoyo: true
+                    });
+                }
+            } else {
+                guideContainer.style.opacity = '0';
+            }
+        }
+
+        function nextPage() {
+            const container = document.querySelector('.page-container');
+            const oldWrapper = document.querySelector('.content-wrapper');
+            const newWrapper = document.createElement('div');
+            newWrapper.className = 'content-wrapper';
+            
+            // 检查是否是最后一页
+            const isLastPage = currentPage === pages.length - 1;
+            
+            // 如果是最后一页，不自动更新currentPage，而是执行结束动画
+            if (isLastPage) {
+                // 保存当前页面，稍后会切换回第一页
+                const finaleAnimation = document.getElementById('finale-animation');
+                
+                // 启动结束动画
+                setTimeout(() => {
+                    finaleAnimation.style.opacity = '1';
+                    
+                    // 创建粒子效果
+                    for (let i = 0; i < 200; i++) {
+                        createFinaleParticle();
+                    }
+                    
+                    // 按顺序显示动画元素
+                    setTimeout(() => {
+                        const heart = document.getElementById('finale-heart');
+                        heart.style.opacity = '1';
+                        heart.style.transform = 'scale(1.5) rotate(0deg)';
+                        
+                        // 添加心跳动画
+                        heart.animate([
+                            { transform: 'scale(1.5) rotate(0deg)' },
+                            { transform: 'scale(1.7) rotate(10deg)' },
+                            { transform: 'scale(1.5) rotate(0deg)' },
+                            { transform: 'scale(1.7) rotate(-10deg)' },
+                            { transform: 'scale(1.5) rotate(0deg)' }
+                        ], {
+                            duration: 2000,
+                            iterations: 2
+                        });
+                    }, 500);
+                    
+                    setTimeout(() => {
+                        const text1 = document.getElementById('finale-text-1');
+                        text1.style.opacity = '1';
+                        text1.style.transform = 'scale(1)';
+                    }, 1500);
+                    
+                    // 结束动画，返回第一页
+                    setTimeout(() => {
+                        currentPage = 0; // 重置到第一页
+                        
+                        // 重置动画元素
+                        const heart = document.getElementById('finale-heart');
+                        const text1 = document.getElementById('finale-text-1');
+                        heart.style.opacity = '0';
+                        heart.style.transform = 'scale(0.5)';
+                        text1.style.opacity = '0';
+                        text1.style.transform = 'scale(0.5)';
+                        
+                        // 淡出结束动画
+                        finaleAnimation.style.opacity = '0';
+                        
+                        // 清理粒子
+                        document.getElementById('finale-particles').innerHTML = '';
+                        
+                        // 加载第一页
+                        setTimeout(() => {
+                            loadNewPage();
+                        }, 500);
+                    }, 5000);
+                }, 1000);
+                
+                return; // 不立即加载新页面
+            } else {
+                // 隐藏当前页的guide（如果有）
+                updateGuideVisibility(false);
+                
+                currentPage = (currentPage + 1) % pages.length;
+                loadNewPage();
+                
+                // 显示新页面的guide（如果需要）
+                setTimeout(() => {
+                    updateGuideVisibility(pages[currentPage].showGuide);
+                }, 1000);
+            }
+            
+            // 封装加载新页面的逻辑为函数
+            function loadNewPage() {
+                // 创建新页面内容
+                let content;
+                
+                // 星空页面 - 添加人物轮廓和指示文字
+                if (currentPage === 1) { // 星空页面
+                    content = `
+                    <div class="content-face" style="position: relative;">
+                        <div class="cyber-heart-container">
+                            <div class="cyber-heart"></div>
+                            <div class="heart-particles" id="heart-particles-${currentPage}"></div>
+                        </div>
+                        <div class="neon-text">${pages[currentPage].title}</div>
+                        <div class="message-container">
+                            ${pages[currentPage].messages.map(msg => `<div class="message">${msg}</div>`).join('')}
+                        </div>
+                        <button class="cyber-button" onclick="nextPage()">继续</button>
+                        <div class="progress-bar"></div>
+                    </div>
+                    `;
+                }
+                // 特殊页面 - CJW页面
+                else if (pages[currentPage].special) {
+                    content = `
+                    <div class="content-face">
+                        <div class="cyber-heart-container">
+                            <div class="cyber-heart"></div>
+                            <div class="heart-particles" id="heart-particles-special"></div>
+                        </div>
+                        <div class="neon-text" style="font-size: 2.5em; animation: specialGlow 2s infinite">${pages[currentPage].title}</div>
+                        <div class="message-container">
+                            ${pages[currentPage].messages.map(msg => `<div class="message" style="font-size: 1.3em">${msg}</div>`).join('')}
+                        </div>
+                        <button class="cyber-button" onclick="nextPage()">继续</button>
+                        <div class="progress-bar"></div>
+                    </div>
+                    `;
+                }
+                // 普通页面
+                else {
+                    content = `
+                    <div class="content-face">
+                        <div class="cyber-heart-container">
+                            <div class="cyber-heart"></div>
+                            <div class="heart-particles" id="heart-particles-${currentPage}"></div>
+                        </div>
+                        <div class="neon-text">${pages[currentPage].title}</div>
+                        <div class="message-container">
+                            ${pages[currentPage].messages.map(msg => `<div class="message">${msg}</div>`).join('')}
+                        </div>
+                        <button class="cyber-button" onclick="nextPage()">继续</button>
+                        <div class="progress-bar"></div>
+                    </div>
+                    `;
+                }
+                
+                newWrapper.innerHTML = content;
+                newWrapper.style.transform = 'translateX(100%) rotateY(-90deg)';
+                container.appendChild(newWrapper);
+                
+                // 更新进度条
+                updateProgress();
+                
+                // 执行翻页动画
+                requestAnimationFrame(() => {
+                    oldWrapper.style.transform = 'translateX(-100%) rotateY(90deg)';
+                    newWrapper.style.transform = 'translateX(0) rotateY(0)';
+                    
+                    // 特殊页面效果
+                    if (pages[currentPage].special) {
+                        // 粒子系统旋转
+                        gsap.to(particlesMesh.rotation, {
+                            y: Math.PI * 2,
+                            x: Math.PI * 2,
+                            duration: 2,
+                            ease: "power2.inOut"
+                        });
+                        
+                        // 显示特殊动画
+                        showSpecialAnimations();
+                    }
+                    
+                    // 激活新页面动画
+                    const messages = newWrapper.querySelectorAll('.message');
+                    const neonTexts = newWrapper.querySelectorAll('.neon-text');
+                    
+                    gsap.to(messages, {
+                        opacity: 1,
+                        x: 0,
+                        duration: 1,
+                        stagger: 0.3
+                    });
+                    
+                    if (pages[currentPage].special) {
+                        gsap.from(neonTexts, {
+                            scale: 0,
+                            opacity: 0,
+                            duration: 1.5,
+                            ease: "elastic.out(1, 0.3)"
+                        });
+                    } else {
+                        gsap.to(neonTexts, {
+                            opacity: 1,
+                            y: 0,
+                            duration: 1,
+                            stagger: 0.2
+                        });
+                    }
+                    
+                    // 移除旧页面
+                    setTimeout(() => {
+                        oldWrapper.remove();
+                    }, 600);
+                    
+                    // 创建心形粒子
+                    setTimeout(() => {
+                        createHeartParticles();
+                    }, 300);
+                });
+            }
+        }
+
+        // 添加创建结束动画粒子的函数
+        function createFinaleParticle() {
+            const particles = document.getElementById('finale-particles');
+            const particle = document.createElement('div');
+            particle.className = 'finale-particle';
+            
+            // 随机位置、颜色和大小
+            const size = 2 + Math.random() * 6;
+            const color = Math.random() > 0.5 ? '#00f0ff' : '#ff008c';
+            const startX = Math.random() * window.innerWidth;
+            const startY = Math.random() * window.innerHeight;
+            const angle = Math.random() * Math.PI * 2;
+            const distance = 100 + Math.random() * 300;
+            const duration = 2 + Math.random() * 3;
+            
+            particle.style.width = `${size}px`;
+            particle.style.height = `${size}px`;
+            particle.style.backgroundColor = color;
+            particle.style.boxShadow = `0 0 ${size * 2}px ${color}`;
+            particle.style.left = `${startX}px`;
+            particle.style.top = `${startY}px`;
+            
+            particles.appendChild(particle);
+            
+            // 动画
+            gsap.to(particle, {
+                x: Math.cos(angle) * distance,
+                y: Math.sin(angle) * distance,
+                opacity: 1,
+                duration: 0.5,
+                onComplete: () => {
+                    gsap.to(particle, {
+                        x: Math.cos(angle) * distance * 2,
+                        y: Math.sin(angle) * distance * 2,
+                        opacity: 0,
+                        duration: duration,
+                        ease: "power1.out",
+                        onComplete: () => {
+                            particle.remove();
+                        }
+                    });
+                }
+            });
+        }
+
+        // 初始化
+        window.onload = () => {
+            // 初始动画
+            const messages = document.querySelectorAll('.message');
+            const neonTexts = document.querySelectorAll('.neon-text');
+            
+            gsap.to(neonTexts, {
+                opacity: 1,
+                y: 0,
+                duration: 1,
+                stagger: 0.2
+            });
+
+            gsap.to(messages, {
+                opacity: 1,
+                x: 0,
+                duration: 1,
+                stagger: 0.3
+            });
+            
+            // 创建心形粒子
+            createHeartParticles();
+            
+            // 初始化黑客风格代码
+            setupMatrixCode();
+            
+            // 初始化隐藏guide
+            updateGuideVisibility(false);
+        };
+    </script>
+</body>
+</html> 
